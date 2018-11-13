@@ -74,6 +74,19 @@ func (m *Map) Get(key KT) (VT, bool) {
 	return val, ok
 }
 
+// GetAndDelete gets an item from map and removes it.
+func (m *Map) GetAndDelete(key KT) (VT, bool) {
+	shard := m.getShard(key)
+	shard.Lock()
+	defer shard.Unlock()
+
+	val, ok := shard.items[key]
+	if ok {
+		delete(shard.items, key)
+	}
+	return val, ok
+}
+
 // Count returns the number of elements within the map.
 func (m *Map) Count() int {
 	count := 0
