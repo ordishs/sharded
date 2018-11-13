@@ -142,6 +142,26 @@ func (m *Map) Iter() <-chan Tuple {
 	return ch
 }
 
+// IterAndRemove returns an iterator which could be used in a for range loop. After
+// each item is consumed, it is removed from the Map
+func (m *Map) IterAndRemove() <-chan Tuple {
+	ch := make(chan Tuple)
+	go func() {
+		// Foreach shard.
+		for _, shard := range m.shards {
+			// For each key, value pair.
+			shard.Lock()
+			for key, val := range shard.items {
+				ch <- Tuple{key, val}
+				delete(shard.items, key)
+			}
+			shard.Unlock()
+		}
+		close(ch)
+	}()
+	return ch
+}
+
 // IterBuffered returns a buffered iterator which could be used in a for range loop.
 // The buffer size is set to the size of the map so that the go-routine can fill the channel
 // with item in one go and the caller can iterate in its own sweet time.
