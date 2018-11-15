@@ -142,6 +142,25 @@ func (m *Map) Iter() <-chan Tuple {
 	return ch
 }
 
+// IterWithWriteLock is exactly the same as Iter except that it requests
+// a Lock() rather than an RLock().
+func (m *Map) IterWithWriteLock() <-chan Tuple {
+	ch := make(chan Tuple)
+	go func() {
+		// Foreach shard.
+		for _, shard := range m.shards {
+			// For each key, value pair.
+			shard.Lock()
+			for key, val := range shard.items {
+				ch <- Tuple{key, val}
+			}
+			shard.Unlock()
+		}
+		close(ch)
+	}()
+	return ch
+}
+
 // IterAndRemove returns an iterator which could be used in a for range loop. After
 // each item is consumed, it is removed from the Map
 func (m *Map) IterAndRemove() <-chan Tuple {
